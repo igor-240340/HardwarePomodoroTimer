@@ -68,24 +68,21 @@ SHOW_DIGIT: MOV R16, ARG1                                   ; Копируем �
             MOV R17, ARG2                                   ; Копируем номер разряда.
 
             LDI ARG1, (CMD_DATA | ADDR_FIXED)               ; Настраиваем фиксированную адресацию.
-            PUSH_TEMPS                                      ;
+            PUSH_R16R17                                     ; Бэкапим код цифры и номер разряда.
             RCALL I2CSTART                                  ;
             RCALL SENDBYTE                                  ;
             RCALL I2CSTOP                                   ;
-            POP_TEMPS                                       ;
 
-            LDI ARG1, CMD_ADDR                              ; Добавляем в команду
-            OR ARG1, R17                                    ; номер разряда.
-            PUSH_TEMPS                                      ;
+            POP R17                                         ; Восстанавливаем номер разряда.
+            LDI ARG1, CMD_ADDR                              ; Добавляем в команду номер разряда.
+            OR ARG1, R17                                    ;
             RCALL I2CSTART                                  ;
-            RCALL SENDBYTE                                  ;
-            POP_TEMPS                                       ;
+            RCALL SENDBYTE                                  ; Код цифры уже в стеке, а номер разряда нам больше не нужен.
             
+            POP R16                                         ; Восстанавливаем код цифры.
             MOV ARG1, R16                                   ; Передаём код цифры.
-            PUSH_TEMPS                                      ;
             RCALL SENDBYTE                                  ;
             RCALL I2CSTOP                                   ;
-            POP_TEMPS                                       ;
 
             RET                                             ;
 
@@ -93,11 +90,11 @@ SHOW_DIGIT: MOV R16, ARG1                                   ; Копируем �
             ; Очистить дисплей.
 CLEARDISP:  LDI R16, 3                                      ; Индекс разряда.
             LDI R17, 4                                      ; Счетчик разрядов.
-CLEARDISP1: LDI ARG1, 0x00                                  ; Гасим все сегменты
-            MOV ARG2, R16                                   ; в текущем разряде.
-            PUSH_TEMPS                                      ;
+CLEARDISP1: LDI ARG1, 0x00                                  ; Гасим все сегменты в текущем разряде.
+            MOV ARG2, R16                                   ;
+            PUSH_R16R17                                     ;
             RCALL SHOW_DIGIT                                ;
-            POP_TEMPS                                       ;
+            POP_R17R16                                      ;
             DEC R16                                         ; Уменьшаем индекс разряда.
             DEC R17                                         ; Уменьшаем счётчик разядов.
             BRNE CLEARDISP1                                 ; Очистили все разряды?
@@ -107,11 +104,11 @@ CLEARDISP1: LDI ARG1, 0x00                                  ; Гасим все 
             ; Зажигает все сегменты во всех разрядах.
 LIGHTALL:   LDI R16, 3                                      ; Индекс разряда.
             LDI R17, 4                                      ; Счетчик разрядов.
-LIGHTALL1:  LDI ARG1, 0xFF                                  ; Зажигаем все сегменты
-            MOV ARG2, R16                                   ; в текущем разряде.
-            PUSH_TEMPS                                      ;
+LIGHTALL1:  LDI ARG1, 0xFF                                  ; Зажигаем все сегменты в текущем разряде.
+            MOV ARG2, R16                                   ;
+            PUSH_R16R17                                     ;
             RCALL SHOW_DIGIT                                ;
-            POP_TEMPS                                       ;
+            POP_R17R16                                      ;
             DEC R16                                         ; Уменьшаем индекс разряда.
             DEC R17                                         ; Уменьшаем счётчик разядов.
             BRNE LIGHTALL1                                  ; Прошлись по всем разрядам?

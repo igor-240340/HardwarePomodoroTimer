@@ -5,11 +5,11 @@
             ;.EQU TIM_MIN = 0                            ; Таймер на 00:10 минут.
             ;.EQU TIM_SEC = 10                           ;
 
-            ;.EQU TIM_MIN = 0                            ; Таймер на 00:03 минут.
-            ;.EQU TIM_SEC = 3                            ;
+            .EQU TIM_MIN = 0                            ; Таймер на 00:03 минут.
+            .EQU TIM_SEC = 3                            ;
 
-            .EQU TIM_MIN = 25                           ; Таймер на 25:00 минут.
-            .EQU TIM_SEC = 0                            ;
+            ;.EQU TIM_MIN = 25                           ; Таймер на 25:00 минут.
+            ;.EQU TIM_SEC = 0                            ;
 
             ;.EQU TIM_MIN = 1                            ; Таймер на минуту.
             ;.EQU TIM_SEC = 0                            ;
@@ -31,7 +31,7 @@
             .DEF RUNCNT = R5                            ; Накапливает количество запусков таймера с момента подачи питания.
 
             .DEF ARG1 = R24                             ; Для передачи аргументов перед RCALL.
-            .DEF ARG2 = R25                             ; NOTE: Хотя вызываемый код копирует данные, при вложенном вызове данные могут измениться.
+            .DEF ARG2 = R25                             ; WARN: Не полагаться на то, что данные останутся неизменными после вызова.
 
             .CSEG
             .ORG 0x00
@@ -50,54 +50,46 @@
             RETI
 
             ;
-            ; Бэкапим общие регистры.
-.MACRO PUSH_TEMPS
+            ; Бэкапим временные регистры.
+.MACRO PUSH_R16R17
             PUSH R16                                    ;
             PUSH R17                                    ;
-            PUSH R18                                    ;
-            PUSH R19                                    ;
 .ENDM
 
             ;
-            ; Восстанавливаем общие регистры.
-.MACRO POP_TEMPS
-            POP R19                                     ;
-            POP R18                                     ;
+            ; Восстанавливаем временные регистры.
+.MACRO POP_R17R16
             POP R17                                     ;
             POP R16                                     ;
 .ENDM
 
             ;
-            ; Бэкапим регистры задержек.
-.MACRO PUSH_DELAY
+            ; Бэкапим регистры подпрограммы задержки в 30ms.
+.MACRO PUSH_DELAY30MS
             PUSH R21                                    ;
             PUSH R22                                    ;
-            PUSH R23                                    ;
 .ENDM
 
             ;
             ; Восстанавливаем регистры задержек.
-.MACRO POP_DELAY
-            POP R23                                     ;
+.MACRO POP_DELAY30MS
             POP R22                                     ;
             POP R21                                     ;
 .ENDM
 
-            .INCLUDE "tm1637.asm"                     ; Подключаем здесь, чтобы модуль увидел макросы PUSH_TEMPS/POP_TEMPS.
+            .INCLUDE "tm1637.asm"                     ; Подключаем здесь, чтобы модуль увидел макросы PUSH_R16R17/POP_R17R16.
 
             ;
             ; Нажата кнопка запуск/остановка таймера.
             ; После повторного нажатия, таймер продолжает тикать с того же самого места,
             ; т.е. не сбрасывается в ноль.
-STARTBTN:   PUSH_TEMPS                                  ; Бэкапим общие регистры.
+STARTBTN:   PUSH R16                                    ; Бэкапим общий регистр R16.
             IN R16, SREG                                ; Бэкапим SREG.
             PUSH R16                                    ;
 
-            PUSH R21                                    ;
-            PUSH R22                                    ;
+            PUSH_DELAY30MS                              ;
             RCALL DELAY30MS                             ; Бэкапим регистры, чтобы не сломать задержку в основном коде.
-            POP R22                                     ;
-            POP R21                                     ;
+            POP_DELAY30MS                               ;
 
             LDI R16, TIMBLNK                            ; Таймер истёк?
             EOR R16, TIMSTATE                           ;
@@ -123,10 +115,14 @@ RUNTIM:     LDI R16, TIMACTV                            ; Запускаем/в�
 
             RJMP EXIT_ISR                               ;
 
+RESETTIM:   LDI R16, TIMSTOP                            ; TIMSTATE = TIMSTOP.
+            MOV TIMSTATE, R16                           ;
+            RJMP EXIT_ISR                               ;
+
             ;
             ; Прерывание по аппаратному таймеру срабатывает каждые 0.001 сек (см. инициализацию таймера в RESET).
             ; Всего ожидаем HWTCNT_SEC прерываний, чтобы зафиксировать секунду.
-HWTIMTICK:  PUSH_TEMPS                                  ; Бэкапим общие регистры.
+HWTIMTICK:  PUSH R16                                    ; Бэкапим общий регистр.
             IN R16, SREG                                ; Бэкапим SREG.
             PUSH R16                                    ;
             LDI R16, 1                                  ; Двухбайтовый инкремент HWTCNT.
@@ -181,21 +177,15 @@ TIM_FIN:    IN R16, TCCR0B                              ; Останавлива
 
             RJMP EXIT_ISR                               ;
 
-RESETTIM:   LDI R16, TIMSTOP                            ; TIMSTATE = TIMSTOP.
-            MOV TIMSTATE, R16                           ;
-            RJMP EXIT_ISR                               ;
-
             ;
             ; Нажата кнопка показа суммарного времени.
-TOTALBTN:   PUSH_TEMPS                                  ; Бэкапим общие регистры.
+TOTALBTN:   PUSH R16                                    ; Бэкапим общий регистр.
             IN R16, SREG                                ; Бэкапим SREG.
             PUSH R16                                    ;
 
-            PUSH R21                                    ;
-            PUSH R22                                    ;
+            PUSH_DELAY30MS                              ;
             RCALL DELAY30MS                             ;
-            POP R22                                     ;
-            POP R21                                     ;
+            POP_DELAY30MS                               ;
 
             IN R16, PINB                                ; Кнопка нажата?
             SBRC R16, PB0                               ;
@@ -218,7 +208,7 @@ TOTALBTN1:  LDI R16, TIMSTOP                            ;
             ; Восстанавливает регистры перед выходом из прерывания.
 EXIT_ISR:   POP R16                                     ; Восстанавливаем SREG.
             OUT SREG, R16                               ;
-            POP_TEMPS                                   ; Восстанавливаем общие регистры.
+            POP R16                                     ; Восстанавливаем общий регистр R16.
             RETI                                        ;
 
             ;
@@ -278,7 +268,7 @@ RESET:      LDI YL, LOW(RAMEND)                         ; В ATtiny13 для а�
             RCALL DELAY200MS                            ;
             RCALL CLEARDISP                             ;
             CBI PORTB, VIBR_PIN                         ;
-            RCALL DELAY30MS                             ;
+            RCALL DELAY200MS                            ;
 
             SEI                                         ;
 
@@ -292,7 +282,7 @@ CHECKTIM:   LDI R16, TIMEXPR                            ; Таймер истё�
 
             LDI R16, TIMBLNK                            ; Вибрация во время индикации отработала?
             EOR R16, TIMSTATE                           ;
-            BREQ BLINK                                  ; Да, просто мигаем.
+            BREQ BLINK                                  ; Да, далее просто мигаем.
 
             LDI R16, TIMTOTL                            ; Нет.
             EOR R16, TIMSTATE                           ; Нажата кнопка показа суммарного времени?
@@ -310,74 +300,40 @@ BLINK:      RCALL LIGHTALL                              ; Индикация.
             RCALL DELAY200MS                            ;
             RJMP CHECKTIM                               ;
 
-SHOWTOTAL:  ;RCALL CLEARDISP                             ;
-            ;LDI ARG1, COLON                             ;
-            ;LDI ARG2, 1                                 ;
-            ;RCALL SHOW_DIGIT                            ;
-            RCALL LIGHTALL                              ;
+SHOWTOTAL:  RCALL LIGHTALL                              ;
             RJMP CHECKTIM                               ;
 
-SHOWTIM:    MOV ARG1, MINLEFT                           ; ARG1 = MINLEFT / 10. ARG2 = MINLEFT % 10.
-            RCALL DIV10                                 ;
-            MOV R16, ARG1                               ;
-            MOV R17, ARG2                               ;
-
-            MOV ARG1, SECLEFT                           ; ARG1 = SECLEFT / 10. ARG2 = SECLEFT % 10.
-            PUSH_TEMPS                                  ;
-            RCALL DIV10                                 ;
-            POP_TEMPS                                   ;
-            MOV R18, ARG1                               ;
-            MOV R19, ARG2                               ;
-
-            PUSH_TEMPS                                  ;
-            MOV ARG1, R16                               ;
+SHOWTIM:    MOV ARG1, MINLEFT                           ; ARG1 = MINLEFT / 10 (числовое значение cтаршего разряда минут).
+            RCALL DIV10                                 ; ARG2 = MINLEFT % 10 (числовое значение младшего разряда минут).
+            RCALL MAPTOCODE                             ; Мапим числовое значение старшего разряда минут в код индикатора.
+            PUSH ARG1                                   ; Бэкапим код старшего разряда минут.
+            MOV ARG1, ARG2                              ; Мапим числовое значение младшего разряда минут в код индикатора.
             RCALL MAPTOCODE                             ;
-            POP_TEMPS                                   ;
-            MOV R16, ARG1                               ;
+            LDI R16, COLON                              ; Младший разряд минут будет выведен на индикаторе с двоеточием.
+            OR ARG1, R16                                ; Добавляем код двоеточия.
+            PUSH ARG1                                   ; Бэкапим код младшего разряда минут.
 
-            PUSH_TEMPS                                  ;
-            MOV ARG1, R17                               ;
-            RCALL MAPTOCODE                             ;
-            POP_TEMPS                                   ;
-            MOV R17, ARG1                               ;
+            MOV ARG1, SECLEFT                           ; ARG1 = SECLEFT / 10 (старший разряд секунд).
+            RCALL DIV10                                 ; ARG2 = SECLEFT % 10 (младший разряд секунд).
+            RCALL MAPTOCODE                             ; Мапим числовое значение старшего разряда секунд в код индикатора.
+            PUSH ARG1                                   ; Бэкапим код старшего разряда секунд.
+            MOV ARG1, ARG2                              ; Мапим числовое значение младшего разряда секунд в код индикатора.
+            RCALL MAPTOCODE                             ; ARG1 - код младшего разряда секунд.
 
-            PUSH_TEMPS                                  ;
-            MOV ARG1, R18                               ;
-            RCALL MAPTOCODE                             ;
-            POP_TEMPS                                   ;
-            MOV R18, ARG1                               ;
+            LDI ARG2, 3                                 ; Выводим младший разряд секунд.
+            RCALL SHOW_DIGIT                            ; ARG1 - уже сожержит код младшего разряда секунд.
 
-            PUSH_TEMPS                                  ;
-            MOV ARG1, R19                               ;
-            RCALL MAPTOCODE                             ;
-            POP_TEMPS                                   ;
-            MOV R19, ARG1                               ;
-
-            MOV ARG1, R16                               ;
-            LDI ARG2, 0                                 ;
-            PUSH_TEMPS                                  ;
+            POP ARG1                                    ; Восстанавливаем старший разряд секунд.
+            LDI ARG2, 2                                 ; Выводим старший разряд секунд.
             RCALL SHOW_DIGIT                            ;
-            POP_TEMPS                                   ;
 
-            MOV ARG1, R17                               ;
-            LDI R16, COLON                              ;
-            OR ARG1, R16                                ;
-            LDI ARG2, 1                                 ;
-            PUSH_TEMPS                                  ;
+            POP ARG1                                    ; Восстанавливаем младший разряд минут.
+            LDI ARG2, 1                                 ; Выводим младший разряд минут.
             RCALL SHOW_DIGIT                            ;
-            POP_TEMPS                                   ;
 
-            MOV ARG1, R18                               ;
-            LDI ARG2, 2                                 ;
-            PUSH_TEMPS                                  ;
+            POP ARG1                                    ; Восстанавливаем старший разряд минут.
+            LDI ARG2, 0                                 ; Выводим старший разряд минут.
             RCALL SHOW_DIGIT                            ;
-            POP_TEMPS                                   ;
-
-            MOV ARG1, R19                               ;
-            LDI ARG2, 3                                 ;
-            PUSH_TEMPS                                  ;
-            RCALL SHOW_DIGIT                            ;
-            POP_TEMPS                                   ;
 
             RJMP CHECKTIM                               ;
 
