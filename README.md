@@ -10,4 +10,5 @@ https://github.com/user-attachments/assets/d1ec8b95-45cc-47d5-b04a-e2e02a76e6fc
 ![](docs/timer_schematic.png)
 
 > [!NOTE]
-> Charging cable can be made from any cable attached to TP4056 module.
+> It's powered by 3.7V Li-Pol accumulator.
+> Charging cable for the accumulator can be made from any cable attached to TP4056 module.
