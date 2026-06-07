@@ -14,5 +14,4 @@ This project has been written in old AVR Studio 4.
 
 ## Power supply
 It's powered by 3.7V Li-Pol accumulator.
-
 Charging cable can be made from any cable attached to TP4056 module.
