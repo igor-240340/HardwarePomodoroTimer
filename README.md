@@ -1,6 +1,7 @@
 # Hardware Pomodoro Timer
 
 This is a Pomodoro timer with a fixed 25-minute session.
+
 It features two buttons: one for start/pause, and another to display the total time you've been focused since startup.
 When the session ends, the device vibrates and blinks so you won't miss the alert.
 
