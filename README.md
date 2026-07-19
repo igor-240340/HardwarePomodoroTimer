@@ -9,9 +9,10 @@ The code is written in pure assembly language, with no third-party libraries usi
 
 It is powered by a 3.7V Li-Po rechargeable battery. To charge it, you will need to build a charging cable using a TP4056 module.
 
+![](docs/1.jpg)
+
 https://github.com/user-attachments/assets/d1ec8b95-45cc-47d5-b04a-e2e02a76e6fc
 
-![](docs/1.jpg)
 ![](docs/2.jpg)
 ![](docs/3.jpg)
 ![](docs/4.jpg)
