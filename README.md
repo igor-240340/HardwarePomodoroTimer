@@ -18,3 +18,6 @@ https://github.com/user-attachments/assets/d1ec8b95-45cc-47d5-b04a-e2e02a76e6fc
 
 ## Schematic
 ![](docs/timer_schematic.png)
+
+> You may notice a delay when exiting the total time display mode upon releasing the button. This is because, upon returning from the interrupt handler, we go back to the total time display subroutine. If we happen to land right at the beginning of this subroutine, we won't exit it until the final instruction is executed, causing a noticeable delay. Conversely, if we land right at its end, we will immediately exit the total time display subroutine upon returning from the interrupt.
+The solution to this problem is: once we have detected the exit from the total time display mode within the interrupt handler, we can modify the return address to point to the beginning of the `MAIN` subroutine.
